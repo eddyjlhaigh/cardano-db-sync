@@ -3,10 +3,16 @@
 
 import           Cardano.Prelude
 
+import           Prelude (id)
+
 import           Cardano.Config.Git.Rev (gitRev)
-import           Cardano.Db (MigrationDir (..))
-import           Cardano.DbSync (ConfigFile (..), DbSyncCommand (..), DbSyncNodeParams (..),
-                   LedgerStateDir (..), SocketPath (..), defDbSyncNodePlugin, runDbSyncNode)
+
+import qualified Cardano.Db as DB
+
+import           Cardano.DbSync (defDbSyncNodePlugin, runDbSyncNode)
+
+import           Cardano.Sync.Config
+import           Cardano.Sync.Config.Types
 
 import           Cardano.Slotting.Slot (SlotNo (..))
 
@@ -27,7 +33,11 @@ main = do
   cmd <- Opt.execParser opts
   case cmd of
     CmdVersion -> runVersionCommand
-    CmdRun params -> runDbSyncNode defDbSyncNodePlugin params
+    CmdRun params -> do
+        trce <- configureLogging params
+        let MigrationDir migrationDir = enpMigrationDir params
+        DB.runMigrations id True (DB.MigrationDir migrationDir) (Just $ DB.LogFileDir "/tmp")
+        runDbSyncNode trce defDbSyncNodePlugin params
 
 -- -------------------------------------------------------------------------------------------------
 
