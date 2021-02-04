@@ -34,12 +34,12 @@ import           Ouroboros.Consensus.Cardano.Block (HardForkBlock (..))
 -- | The default DbSyncNodePlugin.
 -- Does exactly what the cardano-db-sync node did before the plugin system was added.
 -- The non-default node takes this structure and extends the lists.
-defDbSyncNodePlugin :: DbSyncNodePlugin
-defDbSyncNodePlugin =
+defDbSyncNodePlugin :: SqlBackend -> DbSyncNodePlugin
+defDbSyncNodePlugin backend =
   DbSyncNodePlugin
     { plugOnStartup = []
     , plugInsertBlock = [\tracer env ledgerStateVar blockDetails ->
-        DB.runDbAction (Just tracer) $ insertDefaultBlock tracer env ledgerStateVar blockDetails]
+        DB.runDbAction backend (Just tracer) $ insertDefaultBlock tracer env ledgerStateVar blockDetails]
     , plugRollbackBlock = [rollbackToSlot]
     }
 

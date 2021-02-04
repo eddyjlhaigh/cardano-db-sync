@@ -10,6 +10,7 @@ module Cardano.Db.Run
   , runDbIohkLogging
   , runDbNoLogging
   , runDbStdoutLogging
+  , runIohkLogging
   ) where
 
 import           Cardano.BM.Data.LogItem (LOContent (..), LogObject (..), PrivacyAnnotation (..),
@@ -62,18 +63,14 @@ runDbHandleLogger logHandle dbAction = do
     logOut loc src level msg =
       BS.hPutStrLn logHandle . fromLogStr $ defaultLogStr loc src level msg
 
-runDbAction :: Maybe (Trace IO Text) -> ReaderT SqlBackend (LoggingT IO) a -> IO a
-runDbAction mLogging dbAction = do
-    pgconf <- readPGPassFileEnv
+-- Be explicit and send the @SqlBackend@ inside.
+runDbAction :: SqlBackend -> Maybe (Trace IO Text) -> ReaderT SqlBackend (LoggingT IO) a -> IO a
+runDbAction backend mLogging dbAction = do
     case mLogging of
       Nothing ->
-        runSilentLoggingT .
-          withPostgresqlConn (toConnectionString pgconf) $ \backend ->
-            runSqlConnWithIsolation dbAction backend Serializable
+        runSilentLoggingT $ runSqlConnWithIsolation dbAction backend Serializable
       Just tracer ->
-        runIohkLogging tracer .
-          withPostgresqlConn (toConnectionString pgconf) $ \backend ->
-            runSqlConnWithIsolation dbAction backend Serializable
+        runIohkLogging tracer $ runSqlConnWithIsolation dbAction backend Serializable
   where
     runSilentLoggingT :: LoggingT m a -> m a
     runSilentLoggingT action = runLoggingT action silentLog

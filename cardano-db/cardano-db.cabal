@@ -71,6 +71,7 @@ library
                       , postgresql-simple
                       , quiet
                       , resourcet
+                      , resource-pool
                       , scientific
                       , text
                       , template-haskell

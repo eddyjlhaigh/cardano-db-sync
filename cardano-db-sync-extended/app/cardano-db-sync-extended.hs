@@ -7,6 +7,9 @@ import           Prelude (id)
 
 import           Cardano.Config.Git.Rev (gitRev)
 
+import           Database.Persist.Postgresql (withPostgresqlPool)
+import           Data.Pool (withResource)
+
 import qualified Cardano.Db as DB
 
 import           Cardano.DbSync (runDbSyncNode)
@@ -37,9 +40,16 @@ main = do
         trce <- configureLogging params
         let MigrationDir migrationDir = enpMigrationDir params
         DB.runMigrations id True (DB.MigrationDir migrationDir) (Just $ DB.LogFileDir "/tmp")
-        runDbSyncNode trce extendedDbSyncNodePlugin params
 
--- -------------------------------------------------------------------------------------------------
+        -- Open up a connection and use it
+        pgconf <- DB.readPGPassFileEnv
+        let connectionString = DB.toConnectionString pgconf
+
+        DB.runIohkLogging trce $ withPostgresqlPool connectionString 10 $ \pool ->
+          withResource pool $ \backend ->
+            lift $ runDbSyncNode trce (extendedDbSyncNodePlugin backend) params
+
+---------------------------------------------------------------------------------------------------
 
 opts :: ParserInfo DbSyncCommand
 opts =
