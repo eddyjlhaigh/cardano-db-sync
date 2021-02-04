@@ -16,14 +16,13 @@ module Cardano.DbSync.Database
 
 import           Cardano.BM.Trace (Trace, logDebug, logError, logInfo)
 import           Cardano.Prelude
-import           Cardano.Slotting.Slot (SlotNo (..))
 
 import           Control.Monad.Logger (LoggingT)
 import           Control.Monad.Trans.Except.Extra (newExceptT)
 
 import qualified Cardano.Db as DB
-import           Cardano.DbSync.Config
 import           Cardano.DbSync.DbAction
+import           Cardano.DbSync.Environment
 import           Cardano.DbSync.Error
 import           Cardano.DbSync.LedgerState
 import           Cardano.DbSync.Metrics
@@ -49,9 +48,9 @@ runDbStartup trce plugin =
 
 runDbThread
     :: Trace IO Text -> DbSyncEnv -> DbSyncNodePlugin -> Metrics
-    -> DbActionQueue -> LedgerStateVar
+    -> DbActionQueue
     -> IO ()
-runDbThread trce env plugin metrics queue ledgerStateVar = do
+runDbThread trce env plugin metrics queue = do
     logInfo trce "Running DB thread"
     logException trce "runDBThread: " loop
     logInfo trce "Shutting down DB thread"
@@ -60,7 +59,7 @@ runDbThread trce env plugin metrics queue ledgerStateVar = do
       xs <- blockingFlushDbActionQueue queue
       when (length xs > 1) $ do
         logDebug trce $ "runDbThread: " <> textShow (length xs) <> " blocks"
-      eNextState <- runExceptT $ runActions trce env plugin ledgerStateVar xs
+      eNextState <- runExceptT $ runActions trce env plugin xs
       mBlkNo <-  DB.runDbAction (Just trce) DB.queryLatestBlockNo
       case mBlkNo of
         Nothing -> pure ()
@@ -73,9 +72,9 @@ runDbThread trce env plugin metrics queue ledgerStateVar = do
 -- | Run the list of 'DbAction's. Block are applied in a single set (as a transaction)
 -- and other operations are applied one-by-one.
 runActions
-    :: Trace IO Text -> DbSyncEnv -> DbSyncNodePlugin -> LedgerStateVar -> [DbAction]
+    :: Trace IO Text -> DbSyncEnv -> DbSyncNodePlugin -> [DbAction]
     -> ExceptT DbSyncNodeError IO NextState
-runActions trce env plugin ledgerState actions = do
+runActions trce env plugin actions = do
     dbAction Continue actions
   where
     dbAction :: NextState -> [DbAction] -> ExceptT DbSyncNodeError IO NextState
@@ -86,17 +85,17 @@ runActions trce env plugin ledgerState actions = do
         ([], DbFinish:_) -> do
             pure Done
         ([], DbRollBackToPoint pt:ys) -> do
-            runRollbacks trce plugin (dbpSlot pt)
-            liftIO $ loadLedgerStateAtPoint (envLedgerStateDir env) ledgerState pt
+            runRollbacks trce plugin pt
+            liftIO $ loadLedgerStateAtPoint (envLedger env) pt
             dbAction Continue ys
         (ys, zs) -> do
-          insertBlockList trce env ledgerState plugin ys
+          insertBlockList trce env plugin ys
           if null zs
             then pure Continue
             else dbAction Continue zs
 
 runRollbacks
-    :: Trace IO Text -> DbSyncNodePlugin -> SlotNo
+    :: Trace IO Text -> DbSyncNodePlugin -> CardanoPoint
     -> ExceptT DbSyncNodeError IO ()
 runRollbacks trce plugin point =
   newExceptT
@@ -104,9 +103,9 @@ runRollbacks trce plugin point =
     $ plugRollbackBlock plugin
 
 insertBlockList
-    :: Trace IO Text -> DbSyncEnv -> LedgerStateVar -> DbSyncNodePlugin -> [BlockDetails]
+    :: Trace IO Text -> DbSyncEnv -> DbSyncNodePlugin -> [BlockDetails]
     -> ExceptT DbSyncNodeError IO ()
-insertBlockList trce env ledgerState plugin blks =
+insertBlockList trce env plugin blks =
   -- Setting this to True will log all 'Persistent' operations which is great
   -- for debugging, but otherwise is *way* too chatty.
   newExceptT
@@ -117,7 +116,7 @@ insertBlockList trce env ledgerState plugin blks =
         :: BlockDetails
         -> ReaderT SqlBackend (LoggingT IO) (Either DbSyncNodeError ())
     insertBlock blkTip =
-      traverseMEither (\ f -> f trce env ledgerState blkTip) $ plugInsertBlock plugin
+      traverseMEither (\ f -> f trce env blkTip) $ plugInsertBlock plugin
 
 -- | Split the DbAction list into a prefix containing blocks to apply and a postfix.
 spanDbApply :: [DbAction] -> ([BlockDetails], [DbAction])

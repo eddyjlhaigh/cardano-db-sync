@@ -2,18 +2,25 @@
 module Cardano.DbSync.Types
   ( BlockDetails (..)
   , CardanoBlock
+  , CardanoPoint
   , CardanoProtocol
   , EpochSlot (..)
   , SlotDetails (..)
   , SyncState (..)
+  , LedgerStateDir (..)
+  , DbSyncProtocol (..)
   ) where
 
-import           Cardano.DbSync.Config.Types (CardanoBlock, CardanoProtocol)
+import           Cardano.DbSync.Config.Types
 
 import           Cardano.Slotting.Slot (EpochNo (..), EpochSize (..))
 
 import           Data.Time.Clock (UTCTime)
 import           Data.Word (Word64)
+
+import           Ouroboros.Network.Block (Point)
+
+type CardanoPoint = Point CardanoBlock
 
 data BlockDetails = BlockDetails
   { bdBlock :: !CardanoBlock

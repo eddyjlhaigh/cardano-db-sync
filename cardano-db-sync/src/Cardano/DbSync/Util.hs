@@ -24,6 +24,7 @@ import           Cardano.Prelude hiding (catch)
 import           Cardano.BM.Trace (Trace, logError)
 
 import           Cardano.DbSync.Types
+import           Cardano.DbSync.Config.Types ()
 
 import           Cardano.Slotting.Slot (SlotNo (..))
 

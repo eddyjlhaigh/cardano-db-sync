@@ -13,6 +13,7 @@ import qualified Cardano.Db as DB
 import           Cardano.Db.Tool.Validate.Balance (ledgerAddrBalance)
 import           Cardano.Db.Tool.Validate.Util
 import           Cardano.DbSync.Config
+import           Cardano.DbSync.Config.Cardano
 import           Cardano.DbSync.Error
 import           Cardano.DbSync.LedgerState
 import           Cardano.DbSync.Tracing.ToObjectOrphans ()
@@ -32,9 +33,9 @@ validateLedger :: LedgerValidationParams -> IO ()
 validateLedger params =
   withIOManager $ \ _ -> do
     enc <- readDbSyncNodeConfig (vpConfigFile params)
+    genCfg <- orDie renderDbSyncNodeError $ readCardanoGenesisConfig enc
     ledgerFiles <- listLedgerStateFilesOrdered (vpLedgerStateDir params)
     slotNo <- SlotNo <$> DB.runDbNoLogging DB.queryLatestSlotNo
-    genCfg <- orDie renderDbSyncNodeError $ readCardanoGenesisConfig enc
     validate params genCfg slotNo ledgerFiles
 
 validate :: LedgerValidationParams -> GenesisConfig -> SlotNo -> [LedgerStateFile] -> IO ()
@@ -47,7 +48,7 @@ validate params genCfg slotNo ledgerFiles =
       let ledgerSlot = lsfSlotNo ledgerFile
       if ledgerSlot <= slotNo
         then do
-          Just state <- loadLedgerStateFromFile genCfg ledgerFile
+          Just state <- loadFile (mkTopLevelConfig genCfg) False ledgerFile
           validateBalance ledgerSlot (vpAddressUtxo params) state
         else do
           when logFailure . putStrLn $ redText "Ledger is newer than DB. Trying an older ledger."

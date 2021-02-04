@@ -11,8 +11,7 @@ module Cardano.DbSync.Plugin.Epoch
 import           Cardano.BM.Trace (Trace, logError, logInfo)
 
 import qualified Cardano.Chain.Block as Byron
-import           Cardano.DbSync.Config.Types
-import           Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
+import           Cardano.Slotting.Slot (EpochNo (..))
 
 import           Control.Monad (void, when)
 import           Control.Monad.IO.Class (MonadIO, liftIO)
@@ -34,8 +33,8 @@ import           Database.Persist.Sql (SqlBackend)
 
 import           Cardano.Db (EntityField (..), EpochId, listToMaybe)
 import qualified Cardano.Db as DB
+import           Cardano.DbSync.Environment
 import           Cardano.DbSync.Error
-import           Cardano.DbSync.LedgerState
 import           Cardano.DbSync.Types
 import           Cardano.DbSync.Util
 
@@ -66,9 +65,9 @@ epochPluginOnStartup trce = do
         liftIO $ atomicWriteIORef latestCachedEpochVar (Just backOne)
 
 epochPluginInsertBlock
-    :: Trace IO Text -> DbSyncEnv -> LedgerStateVar -> BlockDetails
+    :: Trace IO Text -> DbSyncEnv -> BlockDetails
     -> ReaderT SqlBackend (LoggingT IO) (Either DbSyncNodeError ())
-epochPluginInsertBlock trce _env _ledgerState (BlockDetails cblk details) = do
+epochPluginInsertBlock trce _env (BlockDetails cblk details) = do
     case cblk of
       BlockByron bblk ->
         case byronBlockRaw bblk of
@@ -94,7 +93,7 @@ epochPluginInsertBlock trce _env _ledgerState (BlockDetails cblk details) = do
 
 -- Nothing to be done here.
 -- Rollback will take place in the Default plugin and the epoch table will just be recalculated.
-epochPluginRollbackBlock :: Trace IO Text -> SlotNo -> IO (Either DbSyncNodeError ())
+epochPluginRollbackBlock :: Trace IO Text -> CardanoPoint -> IO (Either DbSyncNodeError ())
 epochPluginRollbackBlock _ _ = pure $ Right ()
 
 -- -------------------------------------------------------------------------------------------------
