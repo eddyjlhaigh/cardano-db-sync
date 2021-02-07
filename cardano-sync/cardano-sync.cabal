@@ -104,5 +104,4 @@ library
                       , typed-protocols
                       , unix
                       , yaml
-                      , timeit
 

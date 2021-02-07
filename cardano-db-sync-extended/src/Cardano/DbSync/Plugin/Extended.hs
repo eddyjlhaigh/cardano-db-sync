@@ -6,8 +6,8 @@ import           Cardano.Prelude
 
 import           Control.Monad.Logger (LoggingT)
 
-import           Cardano.Sync.Util (traverseMEither)
 import           Cardano.Sync.Error (DbSyncNodeError)
+import           Cardano.Sync.Util (traverseMEither)
 
 import           Database.Persist.Sql (SqlBackend)
 
@@ -26,12 +26,14 @@ extendedDbSyncNodePlugin backend =
               ++ [\tracer -> fmap Right $ DB.runDbAction backend (Just tracer) $ epochPluginOnStartup tracer]
 
         , plugInsertBlock = \tracer dbSyncEnv ledgerStateVar blockDetails -> runExceptT $ do
-            ExceptT $ (plugInsertBlock defPlugin) tracer dbSyncEnv ledgerStateVar blockDetails
+
+            let insertBlockPlugin = plugInsertBlock defPlugin
+            ExceptT $ insertBlockPlugin tracer dbSyncEnv ledgerStateVar blockDetails
 
             let allBlocks :: ReaderT SqlBackend (LoggingT IO) (Either DbSyncNodeError ())
-                allBlocks = traverseMEither (\blockDetail -> epochPluginInsertBlock tracer dbSyncEnv ledgerStateVar blockDetail) blockDetails
+                allBlocks = traverseMEither (epochPluginInsertBlock tracer dbSyncEnv ledgerStateVar) blockDetails
 
-            ExceptT $ DB.runDbAction backend (Just tracer) $ allBlocks
+            ExceptT $ DB.runDbAction backend (Just tracer) allBlocks
 
         , plugRollbackBlock =
             plugRollbackBlock defPlugin

@@ -41,9 +41,9 @@ defDbSyncNodePlugin backend =
     , plugInsertBlock = \tracer env ledgerStateVar blockDetails -> do
 
         let allBlocks :: ReaderT SqlBackend (LoggingT IO) (Either DbSyncNodeError ())
-            allBlocks = traverseMEither (\blockDetail -> insertDefaultBlock tracer env ledgerStateVar blockDetail) blockDetails
+            allBlocks = traverseMEither (insertDefaultBlock tracer env ledgerStateVar) blockDetails
 
-        DB.runDbAction backend (Just tracer) $ allBlocks
+        DB.runDbAction backend (Just tracer) allBlocks
 
     , plugRollbackBlock = [rollbackToSlot backend]
     }

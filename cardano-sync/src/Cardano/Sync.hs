@@ -32,7 +32,6 @@ import           Cardano.Prelude hiding (Meta, Nat, option, (%))
 import           Control.Tracer (Tracer)
 
 import           Cardano.BM.Data.Tracer (ToLogObject (..))
-import qualified Cardano.BM.Setup as Logging
 import           Cardano.BM.Trace (Trace, appendName, logError, logInfo)
 import qualified Cardano.BM.Trace as Logging
 
@@ -116,21 +115,18 @@ type InsertValidateGenesisFunction
 
 runSyncNode
     :: CardanoSyncDataLayer
+    -> Trace IO Text
     -> DbSyncNodePlugin
     -> DbSyncNodeParams
     -> InsertValidateGenesisFunction
     -> IO ()
-runSyncNode dataLayer plugin enp insertValidateGenesisDist =
+runSyncNode dataLayer trce plugin enp insertValidateGenesisDist =
   withIOManager $ \iomgr -> do
 
     let configFile = enpConfigFile enp
     enc <- readDbSyncNodeConfig configFile
 
     createDirectoryIfMissing True (unLedgerStateDir $ enpLedgerStateDir enp)
-
-    trce <- if not (dncEnableLogging enc)
-              then pure Logging.nullTracer
-              else liftIO $ Logging.setupTrace (Right $ dncLoggingConfig enc) "smash-node"
 
     logInfo trce $ "Using byron genesis file from: " <> (show . unGenesisFile $ dncByronGenesisFile enc)
     logInfo trce $ "Using shelley genesis file from: " <> (show . unGenesisFile $ dncShelleyGenesisFile enc)

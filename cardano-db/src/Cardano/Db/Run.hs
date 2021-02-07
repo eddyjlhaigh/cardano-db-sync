@@ -1,4 +1,3 @@
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -68,14 +67,12 @@ runDbHandleLogger logHandle dbAction = do
 -- Be explicit and send the @SqlBackend@ inside.
 runDbAction :: SqlBackend -> Maybe (Trace IO Text) -> ReaderT SqlBackend (LoggingT IO) a -> IO a
 runDbAction backend mLogging dbAction = do
-    res <- case mLogging of
+    case mLogging of
       Nothing ->
         runSilentLoggingT $ runSqlConnWithIsolation dbAction backend Serializable
       Just tracer ->
         runIohkLogging tracer $ runSqlConnWithIsolation dbAction backend Serializable
 
-    --close' backend
-    pure res
   where
     runSilentLoggingT :: LoggingT m a -> m a
     runSilentLoggingT action = runLoggingT action silentLog

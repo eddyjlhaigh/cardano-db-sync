@@ -63,6 +63,6 @@ runDbSyncNode backend trce plugin enp = do
                         }
                 }
 
-    runSyncNode cardanoSyncDataLayer plugin enp (insertValidateGenesisDist backend)
+    runSyncNode cardanoSyncDataLayer trce plugin enp (insertValidateGenesisDist backend)
 
 
