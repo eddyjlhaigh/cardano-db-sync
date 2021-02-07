@@ -69,6 +69,4 @@ executable cardano-db-sync-extended
                       , cardano-slotting
                       , optparse-applicative
                       , persistent-postgresql
-                      , resource-pool
                       , text
-                      , resourcet

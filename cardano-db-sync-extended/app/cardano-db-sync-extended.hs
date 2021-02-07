@@ -8,7 +8,6 @@ import           Prelude (id)
 import           Cardano.Config.Git.Rev (gitRev)
 
 import           Database.Persist.Postgresql (withPostgresqlConn)
---import           Data.Pool (withResource)
 
 import qualified Cardano.Db as DB
 

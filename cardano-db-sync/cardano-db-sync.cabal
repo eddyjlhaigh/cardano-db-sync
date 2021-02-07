@@ -125,6 +125,4 @@ executable cardano-db-sync
                       , cardano-slotting
                       , optparse-applicative
                       , persistent-postgresql
-                      , resource-pool
                       , text
-                      , resourcet
