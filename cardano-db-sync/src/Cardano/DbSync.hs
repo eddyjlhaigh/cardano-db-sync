@@ -37,9 +37,11 @@ import           Cardano.DbSync.Rollback (unsafeRollback)
 import           Cardano.Sync
 import           Cardano.Sync.Tracing.ToObjectOrphans ()
 
+import           Database.Persist.Sql (SqlBackend)
 
-runDbSyncNode :: Trace IO Text -> DbSyncNodePlugin -> DbSyncNodeParams -> IO ()
-runDbSyncNode trce plugin enp = do
+
+runDbSyncNode :: SqlBackend -> Trace IO Text -> DbSyncNodePlugin -> DbSyncNodeParams -> IO ()
+runDbSyncNode backend trce plugin enp = do
 
     -- For testing and debugging.
     case enpMaybeRollback enp of
@@ -49,7 +51,7 @@ runDbSyncNode trce plugin enp = do
     -- The base @DataLayer@.
     let cardanoSyncDataLayer =
             CardanoSyncDataLayer
-                { csdlGetSlotHash = DB.runDbIohkLogging trce . DB.querySlotHash
+                { csdlGetSlotHash = DB.runDbIohkLogging backend trce . DB.querySlotHash
 
                 , csdlGetLatestBlock = runMaybeT $ do
                     block <- MaybeT $ DB.runDbNoLogging DB.queryLatestBlock
@@ -61,6 +63,6 @@ runDbSyncNode trce plugin enp = do
                         }
                 }
 
-    runSyncNode cardanoSyncDataLayer plugin enp insertValidateGenesisDist
+    runSyncNode cardanoSyncDataLayer plugin enp (insertValidateGenesisDist backend)
 
 

@@ -17,11 +17,13 @@ import           Cardano.Sync.Error
 import qualified Cardano.DbSync.Era.Byron.Genesis as Byron
 import qualified Cardano.DbSync.Era.Shelley.Genesis as Shelley
 
+import           Database.Persist.Sql (SqlBackend)
+
 insertValidateGenesisDist
-    :: Trace IO Text -> NetworkName -> GenesisConfig
+    :: SqlBackend -> Trace IO Text -> NetworkName -> GenesisConfig
     -> ExceptT DbSyncNodeError IO ()
-insertValidateGenesisDist trce nname genCfg =
+insertValidateGenesisDist backend trce nname genCfg =
   case genCfg of
     GenesisCardano _ bCfg sCfg -> do
-      Byron.insertValidateGenesisDist trce (unNetworkName nname) bCfg
-      Shelley.insertValidateGenesisDist trce (unNetworkName nname) (scConfig sCfg)
+      Byron.insertValidateGenesisDist backend trce (unNetworkName nname) bCfg
+      Shelley.insertValidateGenesisDist backend trce (unNetworkName nname) (scConfig sCfg)

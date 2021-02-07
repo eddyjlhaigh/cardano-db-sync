@@ -30,6 +30,8 @@ import           Cardano.Sync.Plugin
 import           Cardano.Sync.Types
 import           Cardano.Sync.Util
 
+import           System.TimeIt (timeIt)
+
 import qualified System.Metrics.Prometheus.Metric.Gauge as Gauge
 
 data NextState
@@ -56,7 +58,7 @@ runDbThread dataLayer trce env plugin metrics queue ledgerStateVar = do
       when (length xs > 1) $ do
         logDebug trce $ "runDbThread: " <> textShow (length xs) <> " blocks"
 
-      eNextState <- runExceptT $ runActions trce env plugin ledgerStateVar xs
+      eNextState <- timeIt . runExceptT $ runActions trce env plugin ledgerStateVar xs
 
       let getLatestBlock = csdlGetLatestBlock dataLayer
       mBlkNo <- getLatestBlock

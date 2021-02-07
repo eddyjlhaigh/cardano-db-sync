@@ -40,7 +40,7 @@ defDbSyncNodePlugin backend =
     { plugOnStartup = []
     , plugInsertBlock = [\tracer env ledgerStateVar blockDetails ->
         DB.runDbAction backend (Just tracer) $ insertDefaultBlock tracer env ledgerStateVar blockDetails]
-    , plugRollbackBlock = [rollbackToSlot]
+    , plugRollbackBlock = [rollbackToSlot backend]
     }
 
 -- -------------------------------------------------------------------------------------------------

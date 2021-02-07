@@ -1,3 +1,5 @@
+{-# LANGUAGE BangPatterns #-}
+
 module Cardano.DbSync.Plugin.Extended
   ( extendedDbSyncNodePlugin
   ) where
@@ -12,17 +14,18 @@ import           Cardano.Sync (DbSyncNodePlugin (..))
 
 extendedDbSyncNodePlugin :: SqlBackend -> DbSyncNodePlugin
 extendedDbSyncNodePlugin backend =
-  (defDbSyncNodePlugin backend)
-    { plugOnStartup =
-        plugOnStartup (defDbSyncNodePlugin backend)
-          ++ [\tracer -> fmap Right $ DB.runDbAction backend (Just tracer) $ epochPluginOnStartup tracer]
+  let !defPlugin = defDbSyncNodePlugin backend
+  in  defPlugin
+        { plugOnStartup =
+            plugOnStartup defPlugin
+              ++ [\tracer -> fmap Right $ DB.runDbAction backend (Just tracer) $ epochPluginOnStartup tracer]
 
-    , plugInsertBlock =
-        plugInsertBlock (defDbSyncNodePlugin backend)
-          ++ [\tracer env ledgerStateVar blockDetails -> DB.runDbAction backend (Just tracer) $ epochPluginInsertBlock tracer env ledgerStateVar blockDetails]
+        , plugInsertBlock =
+            plugInsertBlock defPlugin
+              ++ [\tracer env ledgerStateVar blockDetails -> DB.runDbAction backend (Just tracer) $ epochPluginInsertBlock tracer env ledgerStateVar blockDetails]
 
-    , plugRollbackBlock =
-        plugRollbackBlock (defDbSyncNodePlugin backend)
-          ++ [epochPluginRollbackBlock]
-    }
+        , plugRollbackBlock =
+            plugRollbackBlock defPlugin
+              ++ [epochPluginRollbackBlock]
+        }
 

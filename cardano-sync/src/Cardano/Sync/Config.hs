@@ -51,7 +51,7 @@ configureLogging params = do
 
     if not (dncEnableLogging enc)
        then pure Logging.nullTracer
-       else liftIO $ Logging.setupTrace (Right $ dncLoggingConfig enc) "smash-node"
+       else liftIO $ Logging.setupTrace (Right $ dncLoggingConfig enc) "db-sync-node"
 
 readDbSyncNodeConfig :: ConfigFile -> IO DbSyncNodeConfig
 readDbSyncNodeConfig (ConfigFile fp) = do

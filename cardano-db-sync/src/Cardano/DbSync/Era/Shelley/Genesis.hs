@@ -50,14 +50,14 @@ import qualified Shelley.Spec.Ledger.UTxO as Shelley
 -- | Idempotent insert the initial Genesis distribution transactions into the DB.
 -- If these transactions are already in the DB, they are validated.
 insertValidateGenesisDist
-    :: Trace IO Text -> Text -> ShelleyGenesis StandardShelley
+    :: SqlBackend -> Trace IO Text -> Text -> ShelleyGenesis StandardShelley
     -> ExceptT DbSyncNodeError IO ()
-insertValidateGenesisDist tracer networkName cfg = do
+insertValidateGenesisDist backend tracer networkName cfg = do
     -- Setting this to True will log all 'Persistent' operations which is great
     -- for debugging, but otherwise *way* too chatty.
     if False
-      then newExceptT $ DB.runDbIohkLogging tracer insertAction
-      else newExceptT $ DB.runDbNoLogging insertAction
+      then newExceptT $ DB.runDbIohkLogging backend tracer insertAction
+      else newExceptT $ DB.runDbIohkNoLogging backend insertAction
   where
     insertAction :: (MonadBaseControl IO m, MonadIO m) => ReaderT SqlBackend m (Either DbSyncNodeError ())
     insertAction = do
