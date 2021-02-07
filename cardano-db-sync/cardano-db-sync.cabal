@@ -127,3 +127,4 @@ executable cardano-db-sync
                       , persistent-postgresql
                       , resource-pool
                       , text
+                      , resourcet

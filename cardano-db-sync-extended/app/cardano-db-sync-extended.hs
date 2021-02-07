@@ -7,8 +7,8 @@ import           Prelude (id)
 
 import           Cardano.Config.Git.Rev (gitRev)
 
-import           Database.Persist.Postgresql (withPostgresqlPool)
-import           Data.Pool (withResource)
+import           Database.Persist.Postgresql (withPostgresqlConn)
+--import           Data.Pool (withResource)
 
 import qualified Cardano.Db as DB
 
@@ -45,9 +45,9 @@ main = do
         pgconf <- DB.readPGPassFileEnv
         let connectionString = DB.toConnectionString pgconf
 
-        DB.runIohkLogging trce $ withPostgresqlPool connectionString 10 $ \pool ->
-          withResource pool $ \backend ->
-            lift $ runDbSyncNode trce (extendedDbSyncNodePlugin backend) params
+        DB.runIohkLogging trce $ withPostgresqlConn connectionString $ \backend -> do
+          let plugin = extendedDbSyncNodePlugin backend
+          lift $ runDbSyncNode backend trce plugin params
 
 ---------------------------------------------------------------------------------------------------
 

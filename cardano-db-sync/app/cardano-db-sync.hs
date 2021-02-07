@@ -47,7 +47,7 @@ main = do
 
         DB.runIohkLogging trce $ withPostgresqlPool connectionString 10 $ \pool ->
           withResource pool $ \backend ->
-            lift $ runDbSyncNode trce (defDbSyncNodePlugin backend) params
+            lift $ runDbSyncNode backend trce (defDbSyncNodePlugin backend) params
 
 ---------------------------------------------------------------------------------------------------
 

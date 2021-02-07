@@ -8,6 +8,7 @@ module Cardano.Db.Run
   , runDbAction
   , runDbHandleLogger
   , runDbIohkLogging
+  , runDbIohkNoLogging
   , runDbNoLogging
   , runDbStdoutLogging
   , runIohkLogging
@@ -66,11 +67,14 @@ runDbHandleLogger logHandle dbAction = do
 -- Be explicit and send the @SqlBackend@ inside.
 runDbAction :: SqlBackend -> Maybe (Trace IO Text) -> ReaderT SqlBackend (LoggingT IO) a -> IO a
 runDbAction backend mLogging dbAction = do
-    case mLogging of
+    res <- case mLogging of
       Nothing ->
         runSilentLoggingT $ runSqlConnWithIsolation dbAction backend Serializable
       Just tracer ->
         runIohkLogging tracer $ runSqlConnWithIsolation dbAction backend Serializable
+
+    --close' backend
+    pure res
   where
     runSilentLoggingT :: LoggingT m a -> m a
     runSilentLoggingT action = runLoggingT action silentLog
@@ -79,12 +83,14 @@ runDbAction backend mLogging dbAction = do
     silentLog _loc _src _level _msg = pure ()
 
 -- | Run a DB action logging via iohk-monitoring-framework.
-runDbIohkLogging :: Trace IO Text -> ReaderT SqlBackend (LoggingT IO) b -> IO b
-runDbIohkLogging tracer dbAction = do
-    pgconf <- readPGPassFileEnv
-    runIohkLogging tracer .
-      withPostgresqlConn (toConnectionString pgconf) $ \backend ->
-        runSqlConnWithIsolation dbAction backend Serializable
+runDbIohkLogging :: SqlBackend -> Trace IO Text -> ReaderT SqlBackend (LoggingT IO) b -> IO b
+runDbIohkLogging backend tracer dbAction = do
+    runIohkLogging tracer $ runSqlConnWithIsolation dbAction backend Serializable
+
+-- | Run a DB action logging via iohk-monitoring-framework.
+runDbIohkNoLogging:: SqlBackend -> ReaderT SqlBackend (NoLoggingT IO) a -> IO a
+runDbIohkNoLogging backend action = do
+    runNoLoggingT $ runSqlConnWithIsolation action backend Serializable
 
 runIohkLogging :: Trace IO Text -> LoggingT m a -> m a
 runIohkLogging tracer action =

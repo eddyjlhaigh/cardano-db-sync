@@ -28,6 +28,8 @@ import           Cardano.Sync.Types
 -- normally happen *before* the default rollback.
 -- That is why the following data type does not have a Semigroup/Monoid instances.
 
+-- TODO(KS): If required, we can unfiy the plugin system to be sequence based, rather then list based.
+-- We can switch the types to be like the `plugInsertBlock`, not lists.
 data DbSyncNodePlugin = DbSyncNodePlugin
   { -- A function run each time the application starts. Can be used to do a one time update/setup
     -- of a table.
@@ -36,7 +38,7 @@ data DbSyncNodePlugin = DbSyncNodePlugin
     -- This will not be called for the original genesis block, but will be called for
     -- all subsequent blocks.
     -- Blocks (including epoch boundary blocks) are called in sequence from the oldest to the newest.
-  , plugInsertBlock :: [Trace IO Text -> DbSyncEnv -> LedgerStateVar -> BlockDetails -> IO (Either DbSyncNodeError ())]
+  , plugInsertBlock :: Trace IO Text -> DbSyncEnv -> LedgerStateVar -> [BlockDetails] -> IO (Either DbSyncNodeError ())
 
     -- Rollback to the specified absolute SlotNo.
   , plugRollbackBlock :: [Trace IO Text -> SlotNo -> IO (Either DbSyncNodeError ())]

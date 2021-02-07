@@ -2,6 +2,13 @@ module Cardano.DbSync.Plugin.Extended
   ( extendedDbSyncNodePlugin
   ) where
 
+import           Cardano.Prelude
+
+import           Control.Monad.Logger (LoggingT)
+
+import           Cardano.Sync.Util (traverseMEither)
+import           Cardano.Sync.Error (DbSyncNodeError)
+
 import           Database.Persist.Sql (SqlBackend)
 
 import qualified Cardano.Db as DB
@@ -12,17 +19,22 @@ import           Cardano.Sync (DbSyncNodePlugin (..))
 
 extendedDbSyncNodePlugin :: SqlBackend -> DbSyncNodePlugin
 extendedDbSyncNodePlugin backend =
-  (defDbSyncNodePlugin backend)
-    { plugOnStartup =
-        plugOnStartup (defDbSyncNodePlugin backend)
-          ++ [\tracer -> fmap Right $ DB.runDbAction backend (Just tracer) $ epochPluginOnStartup tracer]
+  let defPlugin = defDbSyncNodePlugin backend
+  in  defPlugin
+        { plugOnStartup =
+            plugOnStartup defPlugin
+              ++ [\tracer -> fmap Right $ DB.runDbAction backend (Just tracer) $ epochPluginOnStartup tracer]
 
-    , plugInsertBlock =
-        plugInsertBlock (defDbSyncNodePlugin backend)
-          ++ [\tracer env ledgerStateVar blockDetails -> DB.runDbAction backend (Just tracer) $ epochPluginInsertBlock tracer env ledgerStateVar blockDetails]
+        , plugInsertBlock = \tracer dbSyncEnv ledgerStateVar blockDetails -> runExceptT $ do
+            ExceptT $ (plugInsertBlock defPlugin) tracer dbSyncEnv ledgerStateVar blockDetails
 
-    , plugRollbackBlock =
-        plugRollbackBlock (defDbSyncNodePlugin backend)
-          ++ [epochPluginRollbackBlock]
-    }
+            let allBlocks :: ReaderT SqlBackend (LoggingT IO) (Either DbSyncNodeError ())
+                allBlocks = traverseMEither (\blockDetail -> epochPluginInsertBlock tracer dbSyncEnv ledgerStateVar blockDetail) blockDetails
+
+            ExceptT $ DB.runDbAction backend (Just tracer) $ allBlocks
+
+        , plugRollbackBlock =
+            plugRollbackBlock defPlugin
+              ++ [epochPluginRollbackBlock]
+        }
 

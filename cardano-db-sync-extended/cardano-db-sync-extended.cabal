@@ -34,10 +34,12 @@ library
   exposed-modules:      Cardano.DbSync.Plugin.Extended
 
   build-depends:        base                            >= 4.12         && < 4.15
+                      , cardano-prelude
                       , cardano-db
                       , cardano-db-sync
                       , cardano-sync
                       , persistent
+                      , monad-logger
 
 executable cardano-db-sync-extended
   default-language:     Haskell2010
@@ -57,6 +59,7 @@ executable cardano-db-sync-extended
   other-modules:        Paths_cardano_db_sync_extended
 
   build-depends:        base                            >= 4.12         && < 4.15
+                      , cardano-prelude
                       , cardano-config
                       , cardano-db
                       , cardano-db-sync
@@ -68,3 +71,4 @@ executable cardano-db-sync-extended
                       , persistent-postgresql
                       , resource-pool
                       , text
+                      , resourcet
